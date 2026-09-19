@@ -1,0 +1,35 @@
+when:
+  - event: pull_request
+
+# Kept out of test.yaml so the three required PR contexts (build/test/pre-commit)
+# stay exactly what they were; this one needs a Vault next to it.
+steps:
+  - name: integration
+    image: golang:1.25
+    environment:
+      VAULT_VERSION: 1.20.4
+      VAULT_SHA256: fc5fb5d01d192f1216b139fb5c6af17e3af742aaeffc289fd861920ec55f2c9c
+      SSHSIGNHOST_TEST_VAULT_ADDR: http://127.0.0.1:8200
+      # Throwaway dev-mode server on loopback; this token grants nothing.
+      VAULT_TOKEN: dev-root-token
+    commands:
+      # The golang image does not trust the estate's internal CA, so artifactapi
+      # is fetched over http and the archive is pinned by checksum instead.
+      - curl -fsSL -o /tmp/vault.zip "http://artifactapi.example.com/api/v1/remote/hashicorp-releases/vault/$${VAULT_VERSION}/vault_$${VAULT_VERSION}_linux_amd64.zip"
+      - echo "$${VAULT_SHA256}  /tmp/vault.zip" | sha256sum -c -
+      - python3 -m zipfile -e /tmp/vault.zip /usr/local/bin/
+      - chmod +x /usr/local/bin/vault
+      # Dev mode serves plain HTTP; the suite polls /v1/sys/health rather than
+      # sleeping, and the timeout keeps a wedged server from pinning an agent.
+      - vault server -dev -dev-root-token-id="$${VAULT_TOKEN}" -dev-listen-address=127.0.0.1:8200 >/tmp/vault.log 2>&1 &
+      - timeout 600 go test -tags=integration -count=1 -v -run TestIntegration ./...
+    backend_options:
+      kubernetes:
+        serviceAccountName: default
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 1
+          limits:
+            memory: 2Gi
+            cpu: 2

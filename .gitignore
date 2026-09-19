@@ -1,0 +1,4 @@
+/sshsignhost
+/sshsignhost-*
+/completions/
+dist/

@@ -1,0 +1,85 @@
+when:
+  - event: tag
+
+# goreleaser derives the version and changelog from git, so it needs the full
+# history and every tag -- the default partial clone gives it neither.
+clone:
+  - name: git
+    image: woodpeckerci/plugin-git
+    settings:
+      partial: false
+      tags: true
+
+steps:
+  - name: test
+    image: golang:1.25
+    commands:
+      - go test -race ./...
+    backend_options:
+      kubernetes:
+        serviceAccountName: default
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 1
+          limits:
+            memory: 2Gi
+            cpu: 2
+
+  # One driver for both artifact types: the RPM Puppet installs via dnf and the
+  # raw binaries the puppetserver-compiler initContainer fetches by URL.
+  - name: goreleaser
+    image: golang:1.26
+    environment:
+      GORELEASER_VERSION: v2.17.0
+      GITEA_TOKEN:
+        from_secret: RELEASER_TOKEN
+    commands:
+      - go install github.com/goreleaser/goreleaser/v2@$${GORELEASER_VERSION}
+      - goreleaser release --clean
+    depends_on: [test]
+    backend_options:
+      kubernetes:
+        serviceAccountName: default
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 1
+          limits:
+            memory: 2Gi
+            cpu: 2
+
+  # goreleaser cannot PUT to artifactapi, so the RPM it built is pushed to the
+  # local rpm repo (a real yum repo; repodata regenerates automatically).
+  - name: upload-rpm
+    image: registry.example.com/example/almalinux9-base:20260606
+    commands:
+      - |
+        HOST="https://artifactapi.example.com"
+        REPO="rpm-internal"
+        for rpm in dist/*.rpm; do
+          FILE=$$(basename "$$rpm")
+          # artifactapi has no HEAD route (405); probe with GET against the
+          # served path (RPMs are stored under Packages/) to avoid re-upload.
+          code=$$(curl -s -o /dev/null -w '%{http_code}' "$$HOST/api/v2/remotes/$$REPO/files/Packages/$$FILE" || true)
+          if [ "$$code" = "200" ]; then
+            echo "$$FILE already exists in $$REPO (HTTP $$code); skipping upload"
+            continue
+          fi
+          echo "Uploading $$FILE to $$REPO (existence probe returned $$code)"
+          curl -f -X PUT \
+            "$$HOST/api/v2/remotes/$$REPO/files/$$FILE" \
+            -H "Content-Type: application/x-rpm" \
+            --data-binary @"$$rpm"
+        done
+    depends_on: [goreleaser]
+    backend_options:
+      kubernetes:
+        serviceAccountName: default
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 1
+          limits:
+            memory: 2Gi
+            cpu: 2
