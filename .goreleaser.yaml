@@ -1,0 +1,100 @@
+---
+version: 2
+
+project_name: sshsignhost
+
+before:
+  hooks:
+    - mkdir -p completions
+    - sh -c "go run . completion bash > completions/sshsignhost.bash"
+    - sh -c "go run . completion zsh  > completions/_sshsignhost"
+    - sh -c "go run . completion fish > completions/sshsignhost.fish"
+
+builds:
+  - id: sshsignhost
+    binary: sshsignhost
+    main: .
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  # Raw binaries: the puppetserver-compiler initContainer fetches a single
+  # file by URL and checksums it, so the bare binary must be a release asset.
+  - id: binaries
+    ids:
+      - sshsignhost
+    formats:
+      - binary
+    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
+  - id: archives
+    ids:
+      - sshsignhost
+    formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - src: completions/*
+        dst: completions
+
+nfpms:
+  - id: rpm
+    ids:
+      - sshsignhost
+    package_name: sshsignhost
+    formats:
+      - rpm
+    file_name_template: "{{ .ConventionalFileName }}"
+    release: "1"
+    maintainer: Ben Vincent <12552114+neoloc@users.noreply.github.com>
+    homepage: https://github.com/IUCLabs/sshsignhost
+    license: MIT
+    section: default
+    priority: extra
+    description: Signs SSH host certificates with Vault; called by Puppet during catalog compilation
+    # Puppet's generate() calls the binary at this exact path.
+    bindir: /usr/local/bin
+    contents:
+      - src: completions/sshsignhost.bash
+        dst: /usr/share/bash-completion/completions/sshsignhost
+        file_info:
+          mode: 0644
+      - src: completions/_sshsignhost
+        dst: /usr/share/zsh/site-functions/_sshsignhost
+        file_info:
+          mode: 0644
+      - src: completions/sshsignhost.fish
+        dst: /usr/share/fish/vendor_completions.d/sshsignhost.fish
+        file_info:
+          mode: 0644
+
+checksum:
+  name_template: checksums.txt
+
+# The release lands on the estate's Gitea, not github.com.
+gitea_urls:
+  api: https://git.example.com/api/v1
+  download: https://git.example.com
+
+release:
+  draft: false
+  prerelease: auto
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"

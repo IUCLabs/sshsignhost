@@ -62,7 +62,14 @@ hang a catalog compile forever.
 ## Build
 
 ```bash
-make build          # -> dist/sshsignhost
+make build             # -> dist/sshsignhost
 make test
-make rpm            # RPM with bash/zsh/fish completions
+make integration-test  # signs a host key against a dev-mode Vault in a container
+make snapshot          # goreleaser: binaries, RPM and archives into dist/
 ```
+
+Releases are driven entirely by goreleaser on a `v*` tag: the RPM
+(`/usr/local/bin/sshsignhost` plus bash/zsh/fish completions) is pushed to the
+artifactapi `rpm-internal` yum repo, and the raw
+`sshsignhost-<os>-<arch>` binaries, tarballs and `checksums.txt` are attached to
+the Gitea release for the puppetserver-compiler initContainer to fetch.

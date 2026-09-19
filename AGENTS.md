@@ -15,10 +15,11 @@ main.go          # cobra command, flag surface, stdout rendering
 config.go        # YAML config loading, defaults, validation
 vault.go         # Vault HTTP client: approle/kubernetes login + sign
 main_test.go     # end-to-end tests against an httptest TLS stand-in for Vault
-Makefile         # build / test / lint / completions / rpm / version bump
-packaging/       # nfpm spec for the RPM
-scripts/         # build-rpm.sh (completions + nfpm)
-.woodpecker/     # build, test, pre-commit (PR) + release (tag)
+integration_test.go # -tags=integration: signs against a real dev-mode Vault
+Makefile         # build / test / lint / integration-test / snapshot / version bump
+.goreleaser.yaml # binaries + RPM + Gitea release assets, one driver
+scripts/         # integration-test.sh (dev-mode Vault in a container)
+.woodpecker/     # build, test, pre-commit, integration (PR) + release (tag)
 ```
 
 ## Contract with Puppet
@@ -43,12 +44,17 @@ scripts/         # build-rpm.sh (completions + nfpm)
 - Sign: `POST {addr}/v1/{mount_point}/sign/{role_name}` with `X-Vault-Token`
   and `cert_type: host`.
 
-## Known blocker
+## Known blockers
 
 The Vault ACL policy grants `sshca/sign/host`, but the only role that exists is
 `signhost`, so production signs 403 on `sshca/sign/signhost` even though auth
 succeeds. That is a terraform-vault fix, not a bug here -- do not change the
 requested path.
+
+The `signhost` role sets `allowed_domains: int.example.net,example.org` with
+`allow_bare_domains: false`, so the bare hostname and the IP the manifest sends
+alongside the FQDN are refused. `TestIntegrationRejectsPrincipalsOutsideAllowedDomains`
+pins that behaviour; fixing it is another terraform-vault change.
 
 ## TLS
 

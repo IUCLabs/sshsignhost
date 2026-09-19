@@ -1,3 +1,4 @@
 /sshsignhost
 /sshsignhost-*
+/completions/
 dist/

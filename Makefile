@@ -5,7 +5,7 @@ GOFLAGS := -ldflags="-s -w -X main.version=$(VERSION)"
 OS      ?= $(shell go env GOOS)
 ARCH    ?= $(shell go env GOARCH)
 
-.PHONY: all build test lint fmt pre-commit clean install completions rpm rpm-package patch minor major _tag
+.PHONY: all build test lint fmt pre-commit clean install integration-test snapshot release-check patch minor major _tag
 
 all: build
 
@@ -25,21 +25,21 @@ pre-commit:
 	pre-commit run --all-files
 
 clean:
-	rm -rf $(DIST) $(BINARY)
+	rm -rf $(DIST) completions $(BINARY)
 
 install:
 	go install $(GOFLAGS) .
 
-completions: build
-	@mkdir -p $(DIST)/completions
-	$(DIST)/$(BINARY) completion bash > $(DIST)/completions/$(BINARY).bash
-	$(DIST)/$(BINARY) completion zsh  > $(DIST)/completions/_$(BINARY)
-	$(DIST)/$(BINARY) completion fish > $(DIST)/completions/$(BINARY).fish
+# Signs a host key against a throwaway dev-mode Vault; needs docker or podman.
+integration-test:
+	./scripts/integration-test.sh
 
-rpm: build rpm-package
+# Binaries, the RPM and the release assets all come out of goreleaser.
+snapshot:
+	goreleaser release --snapshot --clean
 
-rpm-package:
-	./scripts/build-rpm.sh $(VERSION)
+release-check:
+	goreleaser check
 
 # Bump helpers -- read the latest semver tag and create the next one.
 _LATEST := $(shell git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | head -1)
