@@ -6,6 +6,10 @@ when:
 services:
   - name: vault
     image: hashicorp/vault:1.20
+    # The kubernetes backend builds the Service from this list; without it the
+    # service resolves but carries no port.
+    ports:
+      - 8200
     environment:
       # Throwaway dev-mode server; this token grants nothing outside this pod.
       VAULT_DEV_ROOT_TOKEN_ID: dev-root-token

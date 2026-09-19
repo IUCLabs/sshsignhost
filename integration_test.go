@@ -50,6 +50,10 @@ func itVaultToken() string {
 	return "root"
 }
 
+// Every call is bounded so an unreachable server fails the suite instead of
+// hanging a CI step on a blackholed connect.
+var itClient = &http.Client{Timeout: 15 * time.Second}
+
 func itWaitForVault(t *testing.T) {
 	t.Helper()
 
@@ -57,7 +61,11 @@ func itWaitForVault(t *testing.T) {
 	url := itVaultAddr() + "/v1/sys/health?standbyok=true"
 	var last error
 	for time.Now().Before(deadline) {
-		resp, err := http.Get(url) // #nosec G107
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		if err != nil {
+			t.Fatalf("building health request: %v", err)
+		}
+		resp, err := itClient.Do(req)
 		if err == nil {
 			_ = resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {
@@ -91,7 +99,7 @@ func itVaultAPI(t *testing.T, method, path string, body any) map[string]any {
 	req.Header.Set("X-Vault-Token", itVaultToken())
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := itClient.Do(req)
 	if err != nil {
 		t.Fatalf("%s %s: %v", method, path, err)
 	}
