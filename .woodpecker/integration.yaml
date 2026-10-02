@@ -5,7 +5,7 @@ when:
 # stay exactly what they were; this one needs a Vault next to it.
 steps:
   - name: integration
-    image: artifactapi.example.com/docker-internal/gobuilder:0.1.2-alma9
+    image: artifactapi.example.com/docker-internal/gobuilder:0.1.3-alma9
     environment:
       GOCACHE_S3_BUCKET: gocache
       GOCACHE_S3_REGION: us-east-1
