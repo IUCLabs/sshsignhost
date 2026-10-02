@@ -5,16 +5,26 @@ when:
 # stay exactly what they were; this one needs a Vault next to it.
 steps:
   - name: integration
-    image: golang:1.25
+    image: artifactapi.example.com/docker-internal/gobuilder:0.1.2-alma9
     environment:
+      GOCACHE_S3_BUCKET: gocache
+      GOCACHE_S3_REGION: us-east-1
+      GOCACHE_S3_ENDPOINT_URL: https://s3.example.com
+      GOCACHE_S3_PATH_STYLE: "true"
+      GOCACHE_KEY_PREFIX: ci-sshsignhost
+      GOCACHE_METRICS: "true"
+      GOCACHEPROG: go-cache-plugin --cache-dir=/tmp/gocache
+      AWS_ACCESS_KEY_ID:
+        from_secret: GOCACHE_AWS_ACCESS_KEY_ID
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: GOCACHE_AWS_SECRET_ACCESS_KEY
       VAULT_VERSION: 1.20.4
       VAULT_SHA256: fc5fb5d01d192f1216b139fb5c6af17e3af742aaeffc289fd861920ec55f2c9c
       SSHSIGNHOST_TEST_VAULT_ADDR: http://127.0.0.1:8200
       # Throwaway dev-mode server on loopback; this token grants nothing.
       VAULT_TOKEN: dev-root-token
     commands:
-      # The golang image does not trust the estate's internal CA, so artifactapi
-      # is fetched over http and the archive is pinned by checksum instead.
+      # Fetched over http and pinned by checksum rather than relying on TLS trust.
       - curl -fsSL -o /tmp/vault.zip "http://artifactapi.example.com/api/v1/remote/hashicorp-releases/vault/$${VAULT_VERSION}/vault_$${VAULT_VERSION}_linux_amd64.zip"
       - echo "$${VAULT_SHA256}  /tmp/vault.zip" | sha256sum -c -
       - python3 -m zipfile -e /tmp/vault.zip /usr/local/bin/
