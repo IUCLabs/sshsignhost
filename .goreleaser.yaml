@@ -81,10 +81,10 @@ nfpms:
 checksum:
   name_template: checksums.txt
 
-# The release lands on the estate's Gitea, not github.com.
-gitea_urls:
-  api: https://git.example.com/api/v1
-  download: https://git.example.com
+signs:
+  - artifacts: checksum
+    cmd: scripts/sign.sh
+    args: ["${artifact}", "${signature}"]
 
 release:
   draft: false

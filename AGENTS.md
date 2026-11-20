@@ -17,9 +17,10 @@ vault.go         # Vault HTTP client: approle/kubernetes login + sign
 main_test.go     # end-to-end tests against an httptest TLS stand-in for Vault
 integration_test.go # -tags=integration: signs against a real dev-mode Vault
 Makefile         # build / test / lint / integration-test / snapshot / version bump
-.goreleaser.yaml # binaries + RPM + Gitea release assets, one driver
+.goreleaser.yaml # binaries + RPM + GitHub release assets, one driver
 scripts/         # integration-test.sh (dev-mode Vault in a container)
-.woodpecker/     # build, test, pre-commit, integration (PR) + release (tag)
+.woodpecker/     # PR CI on Gitea: build, test, pre-commit, integration
+.github/workflows/ # GitHub CI + release (tag)
 ```
 
 ## Contract with Puppet
