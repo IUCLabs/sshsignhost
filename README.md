@@ -51,11 +51,13 @@ sshsignhost --valid_principals "host,host.example.com" --ttl 87600h \
 | `--ttl` | `87600h` | no |
 | `--json` | `false` | no |
 | `--config` | `/opt/sshsignhost/config.yaml` | no |
+| `--version` / `-v` (print the version and exit) | — | no |
 
-With `--json`, stdout is exactly:
+With `--json`, stdout is exactly this compact JSON (no whitespace around `:`)
+followed by a single newline:
 
 ```json
-{"signed_key": "ssh-ed25519-cert-v01@openssh.com AAAA..."}
+{"signed_key":"ssh-ed25519-cert-v01@openssh.com AAAA..."}
 ```
 
 Without it, the raw `signed_key` value plus a newline.
