@@ -9,7 +9,7 @@ permissions:
   id-token: write
 
 env:
-  VAULT_ADDR: https://vault.example.com:8200
+  VAULT_ADDR: https://vault.service.consul:8200
 
 jobs:
   release:
