@@ -87,14 +87,9 @@ signs:
     args: ["${artifact}", "${signature}"]
 
 release:
-  draft: false
+  use_existing_draft: true
+  mode: keep-existing
   prerelease: auto
 
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - "^docs:"
-      - "^test:"
-      - "^ci:"
-      - "^chore:"
+  disable: true
